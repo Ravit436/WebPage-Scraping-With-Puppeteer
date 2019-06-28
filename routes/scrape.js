@@ -1,3 +1,4 @@
+const Promise			= require('bluebird');
 const puppeteer			= require('puppeteer');
 const utils             = require('./utils');
 const responseMessages  = require('./responseMessages');
@@ -9,7 +10,7 @@ async function scrapeReviews(req, res){
 		let options = req.body;
 		let browser = await puppeteer.launch();
 		let page = await browser.newPage();
-		await page.goto(options.url);
+		await page.goto(options.url, {waitUntil: "networkidle0"});
 		let reviewsList = await fetchAllReviews(page);
 		await browser.close();
 		let response = {
@@ -24,18 +25,33 @@ async function scrapeReviews(req, res){
 	}
 }
 
-function fetchAllReviews(page) {
-	return page.evaluate(() => {
-		return Array.from(document.querySelectorAll("div.review"))
-		.map(review => ({
-			rating: review.querySelector("div.itemRating > strong").innerText,
-			comments: {
-				title: review.querySelector(".rightCol h6").innerText,
-				body: review.querySelector(".rightCol p").innerText.trim()
-			},
-			reviewer: review.querySelector(".reviewer > dd:nth-child(2)").innerText,
-			date: review.querySelector(".reviewer > dd:nth-child(4)").innerText
-		}));
+async function fetchAllReviews(page) {
+	let reviewsElements = await page.$$("div.review");
+
+	let reviewsList = await Promise.map(reviewsElements, element => {
+		return fetchElementReview(element);
 	});
+	return reviewsList;
+}
+
+async function fetchElementReview(element) {
+	let [rating, commentTitle, commentBody, reviewer, reviewDate] = await Promise.all([
+		element.$eval("div.itemRating > strong", rating => rating.innerText),
+		element.$eval(".rightCol h6", commentTitle => commentTitle.innerText),
+		element.$eval(".rightCol p", commentBody => commentBody.innerText),
+		element.$eval(".reviewer > dd:nth-child(2)", reviewer => reviewer.innerText),
+		element.$eval(".reviewer > dd:nth-child(4)", reviewDate => reviewDate.innerText)
+	]);
+
+	let review = {
+		rating: rating,
+		comments: {
+			title: commentTitle,
+			body: commentBody
+		},
+		reviewer: reviewer,
+		date: reviewDate
+	};
+	return review;
 }
 
