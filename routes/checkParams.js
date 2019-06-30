@@ -9,7 +9,8 @@ function isScrapeReviewsValid(req, res, next){
     let options = req.body;
 
     let schema = Joi.object().keys({
-        url: Joi.string().required()
+		url: Joi.string().required()
+				.regex(new RegExp('^(' + constants.allowedUrl + ')'))
     })
     .options({ allowUnknown: true });
 
@@ -17,10 +18,11 @@ function isScrapeReviewsValid(req, res, next){
 
     if(result.error){
         console.error(result.error);
-        let error = new Error(result.error.details[0].message.replace(/\"/g, ""))
+        let error = new Error(responseMessages.ENTER_VALID_URL);
         error.show_error = 1;
         return utils.sendErrorResponse(error, res);
     }
 
+	options.url = options.url.replace(/(pagenumber=)\w+&/g, '');
     next();
 }

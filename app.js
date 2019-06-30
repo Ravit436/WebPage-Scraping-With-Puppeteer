@@ -21,7 +21,6 @@ app.get('/', (req, res) => {
     res.send("Welcome To Scrapping");
 });
 
-
 app.get('/scrape/reviews', checkParams.isScrapeReviewsValid, scrape.scrapeReviews);
 
 let httpServer = http.createServer(app).listen(app.get('port'), () => {

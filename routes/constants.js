@@ -1,0 +1,2 @@
+exports.allowedUrl = "";
+exports.excludeDefaultImg = "";
